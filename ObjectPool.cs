@@ -4,26 +4,30 @@ using System.Collections.Generic;
 
 public class ObjectPool
 {
-    private Stack<GameObject> StackOfGameObjectsToPool;
+    private Stack<GameObject> stackOfGameObjectsToPool;
 
-    private GameObject GOToPool;
+    private GameObject goToPool;
 
-    private int StartShirnkingAt;
+    private int startAddingToSecondaryPoolAt;
 
-    private Stack<GameObject> stackOfUnNecesseryOnes;
+    private Stack<GameObject> secondaryPool;
 
-    private GameObject ParentGO;
+    private GameObject parentGO;
 
-    private int maxUnnecesseryOnes;
+    private int rangeOfSecondaryPool;
 
     private int numberOfInstancesToCreateWhenAllQueuesEmpty;
 
     /// <summary>
     /// </summary>
     /// <param name="gotopool">Must implement IPoolable</param>
-    /// <param name="numofelements"></param>
-    /// <param name="startshrinkingat"></param>
-    public void InitializeStack(GameObject gotopool, int numofelements = 4, int startshrinkingat = 8, int numberofunnecesseryones = 8) {
+    /// <param name="numberofinitialelements"></param>
+    /// <param name="startaddingtosecondarypoolat"></param>
+    public void InitializeStack(GameObject gotopool, 
+        int numberofinitialelements = 4,
+        int startaddingtosecondarypoolat = 8,
+        int rangeofsecodarypool = 8,
+        int numberofinstancestocreatewhenallqueuesempty=4) {
 
         if (gotopool.GetComponent<IPoolable>() == null)
         {
@@ -32,42 +36,42 @@ public class ObjectPool
             return;
         }
 
-        StartShirnkingAt = startshrinkingat;
+        startAddingToSecondaryPoolAt = startaddingtosecondarypoolat;
 
-        maxUnnecesseryOnes = numberofunnecesseryones;
+        rangeOfSecondaryPool = rangeofsecodarypool;
 
-        numberOfInstancesToCreateWhenAllQueuesEmpty = maxUnnecesseryOnes;
+        numberOfInstancesToCreateWhenAllQueuesEmpty = numberofinstancestocreatewhenallqueuesempty;
 
-        stackOfUnNecesseryOnes = new Stack<GameObject>();
+        secondaryPool = new Stack<GameObject>();
 
-        GOToPool = gotopool;
+        goToPool = gotopool;
 
-        StackOfGameObjectsToPool = new Stack<GameObject>();
+        stackOfGameObjectsToPool = new Stack<GameObject>();
 
-        ParentGO = GameObject.Instantiate(new GameObject(GOToPool.ToString()));
+        parentGO = GameObject.Instantiate(new GameObject(goToPool.ToString()));
 
-        for (int i = 0; i < numofelements; i++)
+        for (int i = 0; i < numberofinitialelements; i++)
         {
             var gotoadd=GameObject.Instantiate(gotopool,new Vector3(0,-100,0),Quaternion.identity);
 
             gotoadd.SetActive(false);
 
-            gotoadd.transform.SetParent(ParentGO.transform);
+            gotoadd.transform.SetParent(parentGO.transform);
 
-            StackOfGameObjectsToPool.Push(gotoadd);
+            stackOfGameObjectsToPool.Push(gotoadd);
         }
     }
 
     public GameObject AddObjectAtPosition(Vector3 position,bool isactive=true) {
 
         //use secondary pool first
-        if (stackOfUnNecesseryOnes.Count > 0)
+        if (secondaryPool.Count > 0)
         {
             return GetInstanceFromSecondaryPool(position, isactive);
         }
 
         //than primary
-        else if (StackOfGameObjectsToPool.Count > 0)
+        else if (stackOfGameObjectsToPool.Count > 0)
         {
             return GetInstanceFromPrimaryPool(position, isactive); 
         }
@@ -87,21 +91,21 @@ public class ObjectPool
         //add new instances to the list
         for (int i = 0; i < numberOfInstancesToCreateWhenAllQueuesEmpty; i++)
         {
-            gotoaddtolist = GameObject.Instantiate(GOToPool);
+            gotoaddtolist = GameObject.Instantiate(goToPool);
 
             gotoaddtolist.SetActive(false);
 
-            StackOfGameObjectsToPool.Push(gotoaddtolist);
+            stackOfGameObjectsToPool.Push(gotoaddtolist);
 
             Debug.Log("Adding element to the stack: " + gotoaddtolist);
 
         }
 
-        gotoaddtolist = StackOfGameObjectsToPool.Pop();
+        gotoaddtolist = stackOfGameObjectsToPool.Pop();
 
         gotoaddtolist.transform.position = position;
 
-        gotoaddtolist.transform.SetParent(ParentGO.transform);
+        gotoaddtolist.transform.SetParent(parentGO.transform);
 
         gotoaddtolist.SetActive(true);
 
@@ -110,7 +114,7 @@ public class ObjectPool
 
     private GameObject GetInstanceFromPrimaryPool(Vector3 position, bool isactive)
     {
-        var objecttoreturn = StackOfGameObjectsToPool.Pop();
+        var objecttoreturn = stackOfGameObjectsToPool.Pop();
 
         objecttoreturn.transform.position = position;
 
@@ -122,7 +126,7 @@ public class ObjectPool
 
     private GameObject GetInstanceFromSecondaryPool(Vector3 position, bool isactive)
     {
-        var objecttoreturn = stackOfUnNecesseryOnes.Pop();
+        var objecttoreturn = secondaryPool.Pop();
 
         objecttoreturn.transform.position = position;
 
@@ -132,13 +136,13 @@ public class ObjectPool
         return objecttoreturn;
     }
 
-    private void DestroyUnNecesseryOnes()
+    private void EmptySecondaryPool()
     {
-        if(stackOfUnNecesseryOnes.Count<=0)return;
+        if(secondaryPool.Count<=0)return;
 
-        for (int i = 0; i < stackOfUnNecesseryOnes.Count; i++)
+        for (int i = 0; i < secondaryPool.Count; i++)
         {
-            GameObject.Destroy(stackOfUnNecesseryOnes.Pop());
+            GameObject.Destroy(secondaryPool.Pop());
             Debug.Log("Destroying: ");
         }
     }
@@ -149,24 +153,34 @@ public class ObjectPool
     /// <param name="objecttohide"></param>
     public void HideObject(GameObject objecttohide)
     {
+        IPoolable objectpoolable = objecttohide.GetComponent<IPoolable>();
+
+        if (objectpoolable == null) {
+
+            Debug.LogError("A non-poolable object is trying to get into the pooling system." +
+                "Add an IPoolable script to your gameobject! "+
+                "Abort pooling! ");
+            return;
+        
+        }
         //if there are too many in the stack
         //add them to the secondary stack
-         if (StackOfGameObjectsToPool.Count >= StartShirnkingAt) {
+         if (stackOfGameObjectsToPool.Count >= startAddingToSecondaryPoolAt) {
 
            // Debug.Log("Caching for shrinking: "+StartShirnkingAt);
             //deactivate
             objecttohide.SetActive(false);
             
             //add it to the secondary pool
-            stackOfUnNecesseryOnes.Push(objecttohide);
+            secondaryPool.Push(objecttohide);
 
-            objecttohide.transform.SetParent(ParentGO.transform);
+            objecttohide.transform.SetParent(parentGO.transform);
 
             //if it is full empty it
-            if (maxUnnecesseryOnes <= stackOfUnNecesseryOnes.Count)
+            if (rangeOfSecondaryPool <= secondaryPool.Count)
             {
                 Debug.Log("Destroying: "+objecttohide);
-                DestroyUnNecesseryOnes();
+                EmptySecondaryPool();
                 return;
             }
             return;
@@ -176,9 +190,9 @@ public class ObjectPool
 
         objecttohide.SetActive(false);
 
-        objecttohide.transform.SetParent(ParentGO.transform);
+        objecttohide.transform.SetParent(parentGO.transform);
 
-        StackOfGameObjectsToPool.Push(objecttohide);
+        stackOfGameObjectsToPool.Push(objecttohide);
 
     }
 }
