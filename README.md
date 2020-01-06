@@ -8,10 +8,10 @@ Any GameObject can go in and out that implements the IPoolable interface, but no
 
 Instructions:
 
-1.Create a class that implements the IPoolable interface.
+1. Create a class that implements the IPoolable interface.
   Add your new script to the GameObject that you wish to pool.
 
-2.Create an instance of the ObjectPool class and
+2. Create an instance of the ObjectPool class and
   declare your "poolable" GameObject in the script wher you are implementing the pool,
   so you can reference it in the below method.
   Call the initalizeStack method.
@@ -24,17 +24,27 @@ Only the first parameter is neccessary to call, otherwise preset values will be 
 
 Something like this:
 
-# yourPool = new ObjectPool();
+<code>
+	
+     yourPool = new ObjectPool();
 
-# yourPool.InitializeStack(yourGameObject,10,20,10);        
+     yourPool.InitializeStack(yourGameObject,10,20,10);
+ 
+</code>
 
-3.Get one from the pool.
+3. Get one from the pool.
 
-# yourPoolName.AddObjectAtPosition(yourPosition);
 
-4.Get one back to the pool varies on your
+<code>
+	
+     yourPoolName.AddObjectAtPosition(yourPosition); 
+ 
+</code>
+
+4. Get one back to the pool varies on your
 implementation of the IPoolable interface.(the interface is not neccessary to use yet),
 but you can use this method to start with...
-   
-# yourPoolName.AddObjectAtPosition(yourIPoolableGameObject);
-		
+
+ <code>
+    yourPoolName.AddObjectAtPosition(yourIPoolableGameObject);
+</code>		
