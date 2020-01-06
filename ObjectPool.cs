@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public class ObjectPool
 {
-    private Stack<GameObject> stackOfGameObjectsToPool;
+    private Stack<GameObject> primaryPool;
 
     private GameObject goToPool;
 
@@ -46,7 +46,7 @@ public class ObjectPool
 
         goToPool = gotopool;
 
-        stackOfGameObjectsToPool = new Stack<GameObject>();
+        primaryPool = new Stack<GameObject>();
 
         parentGO = GameObject.Instantiate(new GameObject(goToPool.ToString()));
 
@@ -58,7 +58,7 @@ public class ObjectPool
 
             gotoadd.transform.SetParent(parentGO.transform);
 
-            stackOfGameObjectsToPool.Push(gotoadd);
+            primaryPool.Push(gotoadd);
         }
     }
 
@@ -71,7 +71,7 @@ public class ObjectPool
         }
 
         //than primary
-        else if (stackOfGameObjectsToPool.Count > 0)
+        else if (primaryPool.Count > 0)
         {
             return GetInstanceFromPrimaryPool(position, isactive); 
         }
@@ -95,13 +95,13 @@ public class ObjectPool
 
             gotoaddtolist.SetActive(false);
 
-            stackOfGameObjectsToPool.Push(gotoaddtolist);
+            primaryPool.Push(gotoaddtolist);
 
             Debug.Log("Adding element to the stack: " + gotoaddtolist);
 
         }
 
-        gotoaddtolist = stackOfGameObjectsToPool.Pop();
+        gotoaddtolist = primaryPool.Pop();
 
         gotoaddtolist.transform.position = position;
 
@@ -114,7 +114,7 @@ public class ObjectPool
 
     private GameObject GetInstanceFromPrimaryPool(Vector3 position, bool isactive)
     {
-        var objecttoreturn = stackOfGameObjectsToPool.Pop();
+        var objecttoreturn = primaryPool.Pop();
 
         objecttoreturn.transform.position = position;
 
@@ -165,7 +165,7 @@ public class ObjectPool
         }
         //if there are too many in the stack
         //add them to the secondary stack
-         if (stackOfGameObjectsToPool.Count >= startAddingToSecondaryPoolAt) {
+         if (primaryPool.Count >= startAddingToSecondaryPoolAt) {
 
            // Debug.Log("Caching for shrinking: "+StartShirnkingAt);
             //deactivate
@@ -192,7 +192,7 @@ public class ObjectPool
 
         objecttohide.transform.SetParent(parentGO.transform);
 
-        stackOfGameObjectsToPool.Push(objecttohide);
+        primaryPool.Push(objecttohide);
 
     }
 }
