@@ -18,6 +18,19 @@ public class ObjectPool
 
     private int numberOfInstancesToCreateWhenAllQueuesEmpty;
 
+    public ObjectPool(GameObject gotopool,
+        int numberofinitialelements,
+        int startaddingtosecondarypoolat,
+        int rangeofsecodarypool,
+        int numberofinstancestocreatewhenallqueuesempty) {
+
+        InitializeStack(gotopool,numberofinitialelements,startaddingtosecondarypoolat,
+            rangeofsecodarypool,numberofinstancestocreatewhenallqueuesempty);
+
+
+
+    }
+
     /// <summary>
     /// </summary>
     /// <param name="gotopool">Must implement IPoolable</param>
