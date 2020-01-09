@@ -8,15 +8,18 @@ public class ObjectPool
 
     private GameObject goToPool;
 
-    private int startAddingToSecondaryPoolAt;
+    private int rangeOfFirstPool;
 
     private Stack<GameObject> secondaryPool;
 
-    private GameObject parentGO;
+    private GameObject primaryParentGO;
+    private GameObject secondaryParentGO;
+
 
     private int rangeOfSecondaryPool;
 
     private int numberOfInstancesToCreateWhenAllQueuesEmpty;
+
 
     public ObjectPool(GameObject gotopool,
         int numberofinitialelements = 4,
@@ -26,9 +29,6 @@ public class ObjectPool
 
         InitializeStack(gotopool,numberofinitialelements,startaddingtosecondarypoolat,
             rangeofsecodarypool,numberofinstancestocreatewhenallqueuesempty);
-
-
-
     }
 
     /// <summary>
@@ -49,7 +49,7 @@ public class ObjectPool
             return;
         }
 
-        startAddingToSecondaryPoolAt = startaddingtosecondarypoolat;
+        rangeOfFirstPool = startaddingtosecondarypoolat;
 
         rangeOfSecondaryPool = rangeofsecodarypool;
 
@@ -61,18 +61,30 @@ public class ObjectPool
 
         primaryPool = new Stack<GameObject>();
 
-        parentGO = GameObject.Instantiate(new GameObject(goToPool.ToString()));
+        primaryParentGO = GameObject.Instantiate(
+            new GameObject("primary " + goToPool.ToString()));
+
+        secondaryParentGO = GameObject.Instantiate(
+            new GameObject("seconary " + goToPool.ToString()));
 
         for (int i = 0; i < numberofinitialelements; i++)
         {
-            var gotoadd=GameObject.Instantiate(gotopool,new Vector3(0,-100,0),Quaternion.identity);
+            GameObject gotoadd = GenerateNewInstance();
 
             gotoadd.SetActive(false);
 
-            gotoadd.transform.SetParent(parentGO.transform);
+            gotoadd.transform.SetParent(primaryParentGO.transform);
 
             primaryPool.Push(gotoadd);
         }
+    }
+
+    private GameObject GenerateNewInstance()
+    {
+        var gotoadd = GameObject.Instantiate(goToPool, new Vector3(0, -100, 0), Quaternion.identity);
+
+        gotoadd.GetComponent<IPoolable>().SetPooler(this);
+        return gotoadd;
     }
 
     public GameObject AddObjectAtPosition(Vector3 position,bool isactive=true) {
@@ -92,35 +104,30 @@ public class ObjectPool
         //if both empty instantiate
         else
         {
-            return GenerateInstances(position);
+            return GenerateInstances(position,isactive);
         }
 
     }
 
-    private GameObject GenerateInstances(Vector3 position)
+    private GameObject GenerateInstances(Vector3 position,bool isactive=false)
     {
         GameObject gotoaddtolist = null;
 
         //add new instances to the list
         for (int i = 0; i < numberOfInstancesToCreateWhenAllQueuesEmpty; i++)
         {
-            gotoaddtolist = GameObject.Instantiate(goToPool);
-
-            gotoaddtolist.SetActive(false);
-
+            gotoaddtolist = GenerateNewInstance();
             primaryPool.Push(gotoaddtolist);
+            gotoaddtolist.SetActive(false);          
+            gotoaddtolist.transform.SetParent(primaryParentGO.transform);
 
-            Debug.Log("Adding element to the stack: " + gotoaddtolist);
+            Debug.Log("Adding element to the stack: " + gotoaddtolist+i);
 
         }
 
-        gotoaddtolist = primaryPool.Pop();
-
+        gotoaddtolist = GenerateNewInstance();
         gotoaddtolist.transform.position = position;
-
-        gotoaddtolist.transform.SetParent(parentGO.transform);
-
-        gotoaddtolist.SetActive(true);
+        gotoaddtolist.SetActive(isactive);
 
         return gotoaddtolist;
     }
@@ -128,10 +135,13 @@ public class ObjectPool
     private GameObject GetInstanceFromPrimaryPool(Vector3 position, bool isactive)
     {
         var objecttoreturn = primaryPool.Pop();
+        objecttoreturn = objecttoreturn == null ? GenerateInstances(position) : objecttoreturn;
 
         objecttoreturn.transform.position = position;
 
         objecttoreturn.SetActive(isactive);
+
+        objecttoreturn.transform.parent = null;
 
         //Debug.Log("adding from 1. pool: " + objecttoreturn);
         return objecttoreturn;
@@ -141,9 +151,16 @@ public class ObjectPool
     {
         var objecttoreturn = secondaryPool.Pop();
 
+        objecttoreturn = objecttoreturn == null ? primaryPool.Pop() : objecttoreturn;
+
+        objecttoreturn = objecttoreturn == null ? GenerateInstances(position) : objecttoreturn;
+
         objecttoreturn.transform.position = position;
 
         objecttoreturn.SetActive(isactive);
+
+        objecttoreturn.transform.parent = null;
+
 
         //Debug.Log("adding from 2. pool: " + objecttoreturn);
         return objecttoreturn;
@@ -166,46 +183,65 @@ public class ObjectPool
     /// <param name="objecttohide"></param>
     public void HideObject(GameObject objecttohide)
     {
+        if (!objecttohide)
+        {
+
+            Debug.LogError("Objecttohide is null! Abort pooling!");
+            return;
+
+        }
+
         IPoolable objectpoolable = objecttohide.GetComponent<IPoolable>();
 
-        if (objectpoolable == null) {
+        if (objectpoolable == null)
+        {
 
             Debug.LogError("A non-poolable object is trying to get into the pooling system." +
-                "Add an IPoolable script to your gameobject! "+
+                "Add an IPoolable script to your gameobject! " +
                 "Abort pooling! ");
             return;
-        
+
         }
         //if there are too many in the stack
         //add them to the secondary stack
-         if (primaryPool.Count >= startAddingToSecondaryPoolAt) {
-
-           // Debug.Log("Caching for shrinking: "+StartShirnkingAt);
-            //deactivate
-            objecttohide.SetActive(false);
-            
-            //add it to the secondary pool
-            secondaryPool.Push(objecttohide);
-
-            objecttohide.transform.SetParent(parentGO.transform);
-
-            //if it is full empty it
-            if (rangeOfSecondaryPool <= secondaryPool.Count)
+        if (primaryPool.Count >= rangeOfFirstPool)
+        {
+            if (secondaryPool.Count >= rangeOfSecondaryPool)
             {
-                Debug.Log("Destroying: "+objecttohide);
-                EmptySecondaryPool();
+                Debug.Log("Destroying: " + objecttohide);
+                GameObject.Destroy(objecttohide);
+                if (secondaryPool.Count > 0)
+                    GameObject.Destroy(secondaryPool.Pop());
+
+                //EmptySecondaryPool();
                 return;
             }
+
+            AddInstanceToSecondary(objecttohide);
+           
             return;
 
-         }
-        //Debug.Log("adding back to 1. pool: "+ objecttohide);
+        }
 
+        AddInstanceToPrimary(objecttohide);
+
+    }
+
+    private void AddInstanceToSecondary(GameObject objecttohide)
+    {
         objecttohide.SetActive(false);
 
-        objecttohide.transform.SetParent(parentGO.transform);
+        objecttohide.transform.SetParent(secondaryParentGO.transform);
+
+        secondaryPool.Push(objecttohide);
+    }
+
+    private void AddInstanceToPrimary(GameObject objecttohide)
+    {
+        objecttohide.SetActive(false);
+
+        objecttohide.transform.SetParent(primaryParentGO.transform);
 
         primaryPool.Push(objecttohide);
-
     }
 }
