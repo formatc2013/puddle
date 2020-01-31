@@ -1,5 +1,5 @@
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
 
 
 public class ObjectPool
@@ -12,8 +12,8 @@ public class ObjectPool
 
     private Stack<GameObject> secondaryPool;
 
-    private GameObject primaryParentGO;
-    private GameObject secondaryParentGO;
+    //private GameObject primaryParentGO;
+    //private GameObject secondaryParentGO;
 
 
     private int rangeOfSecondaryPool;
@@ -25,10 +25,11 @@ public class ObjectPool
         int numberofinitialelements = 4,
         int startaddingtosecondarypoolat = 8,
         int rangeofsecodarypool = 8,
-        int numberofinstancestocreatewhenallqueuesempty = 4) {
+        int numberofinstancestocreatewhenallqueuesempty = 4)
+    {
 
-        InitializeStack(gotopool,numberofinitialelements,startaddingtosecondarypoolat,
-            rangeofsecodarypool,numberofinstancestocreatewhenallqueuesempty);
+        InitializeStack(gotopool, numberofinitialelements, startaddingtosecondarypoolat,
+            rangeofsecodarypool, numberofinstancestocreatewhenallqueuesempty);
     }
 
     /// <summary>
@@ -36,15 +37,23 @@ public class ObjectPool
     /// <param name="gotopool">Must implement IPoolable</param>
     /// <param name="numberofinitialelements"></param>
     /// <param name="startaddingtosecondarypoolat"></param>
-    private void InitializeStack(GameObject gotopool, 
+    private void InitializeStack(GameObject gotopool,
         int numberofinitialelements = 4,
         int startaddingtosecondarypoolat = 8,
         int rangeofsecodarypool = 8,
-        int numberofinstancestocreatewhenallqueuesempty=4) {
+        int numberofinstancestocreatewhenallqueuesempty = 4)
+    {
+
+
+        if (gotopool == null)
+        {
+            Debug.LogError("Gotopool is null!");
+            return;
+        }
 
         if (gotopool.GetComponent<IPoolable>() == null)
         {
-            Debug.LogError("gotopool must have a component that implements IPoolable!" +
+            Debug.LogError("Gotopool must have a component that implements IPoolable!" +
                 " Aborting initialization!");
             return;
         }
@@ -61,11 +70,11 @@ public class ObjectPool
 
         primaryPool = new Stack<GameObject>();
 
-        primaryParentGO = GameObject.Instantiate(
-            new GameObject("primary " + goToPool.ToString()));
+        // primaryParentGO = GameObject.Instantiate(
+        //     new GameObject("primary " + goToPool.ToString()));
 
-        secondaryParentGO = GameObject.Instantiate(
-            new GameObject("seconary " + goToPool.ToString()));
+        // secondaryParentGO = GameObject.Instantiate(
+        //    new GameObject("seconary " + goToPool.ToString()));
 
         for (int i = 0; i < numberofinitialelements; i++)
         {
@@ -73,7 +82,7 @@ public class ObjectPool
 
             gotoadd.SetActive(false);
 
-            gotoadd.transform.SetParent(primaryParentGO.transform);
+            //   gotoadd.transform.SetParent(primaryParentGO.transform);
 
             primaryPool.Push(gotoadd);
         }
@@ -87,7 +96,8 @@ public class ObjectPool
         return gotoadd;
     }
 
-    public GameObject AddObjectAtPosition(Vector3 position,bool isactive=true) {
+    public GameObject AddObjectAtPosition(Vector3 position, bool isactive = true)
+    {
 
         //use secondary pool first
         if (secondaryPool.Count > 0)
@@ -98,18 +108,18 @@ public class ObjectPool
         //than primary
         else if (primaryPool.Count > 0)
         {
-            return GetInstanceFromPrimaryPool(position, isactive); 
+            return GetInstanceFromPrimaryPool(position, isactive);
         }
 
         //if both empty instantiate
         else
         {
-            return GenerateInstances(position,isactive);
+            return GenerateInstances(position, isactive);
         }
 
     }
 
-    private GameObject GenerateInstances(Vector3 position,bool isactive=false)
+    private GameObject GenerateInstances(Vector3 position, bool isactive = false)
     {
         GameObject gotoaddtolist = null;
 
@@ -118,10 +128,10 @@ public class ObjectPool
         {
             gotoaddtolist = GenerateNewInstance();
             primaryPool.Push(gotoaddtolist);
-            gotoaddtolist.SetActive(false);          
-            gotoaddtolist.transform.SetParent(primaryParentGO.transform);
+            gotoaddtolist.SetActive(false);
+            // gotoaddtolist.transform.SetParent(primaryParentGO.transform);
 
-            Debug.Log("Adding element to the stack: " + gotoaddtolist+i);
+            Debug.Log("Adding element to the stack: " + gotoaddtolist + i);
 
         }
 
@@ -168,7 +178,7 @@ public class ObjectPool
 
     private void EmptySecondaryPool()
     {
-        if(secondaryPool.Count<=0)return;
+        if (secondaryPool.Count <= 0) return;
 
         for (int i = 0; i < secondaryPool.Count; i++)
         {
@@ -176,7 +186,7 @@ public class ObjectPool
             Debug.Log("Destroying: ");
         }
     }
-    
+
     /// <summary>
     /// Pooling back.
     /// </summary>
@@ -218,7 +228,7 @@ public class ObjectPool
             }
 
             AddInstanceToSecondary(objecttohide);
-           
+
             return;
 
         }
@@ -231,7 +241,7 @@ public class ObjectPool
     {
         objecttohide.SetActive(false);
 
-        objecttohide.transform.SetParent(secondaryParentGO.transform);
+        //objecttohide.transform.SetParent(secondaryParentGO.transform);
 
         secondaryPool.Push(objecttohide);
     }
@@ -240,7 +250,7 @@ public class ObjectPool
     {
         objecttohide.SetActive(false);
 
-        objecttohide.transform.SetParent(primaryParentGO.transform);
+        //objecttohide.transform.SetParent(primaryParentGO.transform);
 
         primaryPool.Push(objecttohide);
     }
