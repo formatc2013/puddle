@@ -28,7 +28,7 @@ Instructions:
     	    	 m_pool.HideObject(gameObject);
 	    	
     	    }
-     }
+        }
      
   Add your new script to the GameObject that you wish to pool.
 
@@ -46,10 +46,12 @@ Instructions:
 	      
 	               yourPool = new ObjectPool(yourPoolableGameObject,10,20,10,false,true);
 		         
-	      }
- 	  }     
+	          }
+	      }     
     
     
+    
+       
   
   		Parameters:
   		1, GameObject of your poolable object(with IPoolable).
@@ -79,16 +81,16 @@ You can also reference it and move it around etc.
  
 
 4. If you want to get rid of your poolable object you can just call your PoolBack() function of your IPoolable:
-
 	
-	    public class YourDestroyerObject : MonoBehaviour
-    	    {
-    		void OnTriggerEnter(Collider other){
-			
-			YourPoolableObject.PoolBack();
-	
-	        }
-		
-	    }
+       public class YourDestroyerObject : MonoBehaviour
+       {
+       
+            void OnTriggerEnter(Collider other){
+            			
+                YourPoolableObject.PoolBack();
+            	
+            }
+       		
+       }
     
 </code>		
