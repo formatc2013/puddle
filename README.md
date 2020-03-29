@@ -94,4 +94,4 @@ You can also reference it and move it around etc.
        		
        }
     
-</code>		
+5. If you want to use the autoCleanUp feature, just add the Scheduler.cs to a GameObject in your scene. You can also set the cleanup interval in the Editor.	
