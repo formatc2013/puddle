@@ -66,13 +66,13 @@ Instructions:
 Only the first parameter is neccessary to call, otherwise preset values will be called(4,8,8,4,true,true).
 
 
-3. To get one from the pool, just call AddObjectAtPosition():
+3. To get one from the pool, just call AddObjectAtPosition().
 You can also reference it and move it around etc.
 
 	
 	    void OnTriggerEnter(Collider other){
 	
-		   var yournewobject = yourPool.AddObjectAtPosition(yourPosition); 
+		   GameObject yournewobject = yourPool.AddObjectAtPosition(yourPosition); 
 		   
 		   yournewobject.transform.position = new Vector3();
 	
@@ -83,8 +83,9 @@ You can also reference it and move it around etc.
 4. If you want to get rid of your poolable object you can just call your PoolBack() function of your IPoolable:
 	
        public class YourDestroyerObject : MonoBehaviour
-       {
-       
+       {	
+           ...other code
+	    
             void OnTriggerEnter(Collider other){
             			
                 YourPoolableObject.PoolBack();
