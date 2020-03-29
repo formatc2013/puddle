@@ -37,18 +37,17 @@ Instructions:
          public class YourPool : MonoBehaviour
          {
 	 
-	      //assign in editor or load etc
-	      [SerializeField]private GameObject yourPoolableGameObject;
+	          //assign in editor or load etc
+	          [SerializeField]private GameObject yourPoolableGameObject;
 	      
-	      private ObjectPool yourPool;
-	     
-	
+	          private ObjectPool yourPool;
+	      
      	      void Awake(){
 	      
-	     	     yourPool = new ObjectPool(yourPoolableGameObject,10,20,10,false,true);
-		     
+	               yourPool = new ObjectPool(yourPoolableGameObject,10,20,10,false,true);
+		         
 	      }
- 	 }     
+ 	  }     
     
     
   
