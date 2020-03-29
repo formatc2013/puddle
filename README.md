@@ -14,20 +14,20 @@ Instructions:
        public class YourPoolableObject : MonoBehaviour,IPoolable
        {
     
-    	ObjectPool m_pool;
-	
-    	//it is called in the ObjectPool itself
-    	public void SetPool(ObjectPool objectPool){
-	
-    		m_pool=objectPool;
-		
-    	}
-    	//you call this to pool it back
-    	public void PoolBack(){
-    	
-    		 m_pool.HideObject(gameObject);
-		
-    	}
+    	    ObjectPool m_pool;
+	    
+    	    //it is called in the ObjectPool itself
+    	    public void SetPool(ObjectPool objectPool){
+	    
+    	    	m_pool=objectPool;
+	    	
+    	    }
+    	    //you call this to pool it back
+    	    public void PoolBack(){
+    	    
+    	    	 m_pool.HideObject(gameObject);
+	    	
+    	    }
      }
      
   Add your new script to the GameObject that you wish to pool.
@@ -37,17 +37,17 @@ Instructions:
          public class YourPool : MonoBehaviour
          {
 	 
-	     //assign in editor or load etc
-	     [SerializeField]private GameObject yourPoolableGameObject;
-	     
-	     private ObjectPool yourPool;
+	      //assign in editor or load etc
+	      [SerializeField]private GameObject yourPoolableGameObject;
+	      
+	      private ObjectPool yourPool;
 	     
 	
-     	     void Awake(){
-	     
+     	      void Awake(){
+	      
 	     	     yourPool = new ObjectPool(yourPoolableGameObject,10,20,10,false,true);
 		     
-	     }
+	      }
  	 }     
     
     
@@ -69,13 +69,13 @@ Only the first parameter is neccessary to call, otherwise preset values will be 
 You can also reference it and move it around etc.
 
 	
-	void OnTriggerEnter(Collider other){
+	    void OnTriggerEnter(Collider other){
 	
 		   var yournewobject = yourPool.AddObjectAtPosition(yourPosition); 
 		   
 		   yournewobject.transform.position = new Vector3();
 	
-	}
+	    }
   
  
 
@@ -88,7 +88,8 @@ You can also reference it and move it around etc.
 			
 			YourPoolableObject.PoolBack();
 	
-		}
-	   }
+	        }
+		
+	    }
     
 </code>		
