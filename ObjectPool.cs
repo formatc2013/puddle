@@ -8,7 +8,8 @@ public class ObjectPool
     private Stack<GameObject> primaryPool, secondaryPool;
 
     private List<GameObject> activePool;
-
+    
+    //this is for debugging pools, you can comment this out with the setlist() calls
     public List<GameObject> prim, sec;
 
     private GameObject goToPool;
@@ -102,7 +103,7 @@ public class ObjectPool
 
             primaryPool.Push(gotoadd);
         }
-
+        //only for debugging, comment this out if not needed
         setlists();
     }
 
@@ -208,7 +209,7 @@ public class ObjectPool
         objecttoreturn.SetActive(isactive);
 
         objecttoreturn.transform.parent = null;
-
+         //only for debugging, comment this out if not needed
         setlists();
         //Debug.Log("adding from 2. pool: " + objecttoreturn);
         return objecttoreturn;
@@ -223,6 +224,7 @@ public class ObjectPool
             GameObject.Destroy(secondaryPool.Pop());
             Debug.Log("Destroying: ");
         }
+         //only for debugging, comment this out if not needed
         setlists();
     }
 
@@ -263,6 +265,7 @@ public class ObjectPool
             }
 
             AddInstanceToSecondary(objecttohide);
+             //only for debugging, comment this out if not needed
             setlists();
             return;
         }
@@ -279,6 +282,7 @@ public class ObjectPool
         //objecttohide.transform.SetParent(secondaryParentGO.transform);
 
         secondaryPool.Push(objecttohide);
+         //only for debugging, comment this out if not needed
         setlists();
     }
 
@@ -290,6 +294,7 @@ public class ObjectPool
         //objecttohide.transform.SetParent(primaryParentGO.transform);
 
         primaryPool.Push(objecttohide);
+         //only for debugging, comment this out if not needed
         setlists();
     }
 
@@ -343,6 +348,8 @@ public class ObjectPool
 
 
         hasRequestedObjectsSinceLastCleanup = false;
+          //only for debugging, comment this out if not needed
+        setlists();
     }
 
     public void DisablePool() {
