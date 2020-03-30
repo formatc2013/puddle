@@ -97,3 +97,5 @@ You can also reference it and move it around etc.
 5. If you want to use the autoCleanUp feature, just add the Scheduler.cs to a GameObject in your scene. You can also set the cleanup interval in the Editor.	
 
 6. If you want to get rid of all your pooled GameObjects from your pool, and the Pool itself, just call DisablePool() on your ObjectPool instance.
+
+7. There is a prim and sec variable in the ObjectPool class. Use these to visualize your pools. If you not using them it's a good idea to comment them out.
