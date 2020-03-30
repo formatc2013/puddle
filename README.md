@@ -4,7 +4,7 @@ A simple, dynamically growing and shrinking Object Pooling System.
 Alpha version of my object pooling system implemented in Unity 2019.2
 
 The pool dynamically grows and shrinks and GameObjects come and go.    
-It detects unused objects, and gets rid of them (has to be set up manually by adding a script to a GameObject in your scene.)    
+It automatically detects unused objects, and gets rid of them (has to be set up manually by adding a script to a GameObject in your scene.)    
 Any GameObject can go in and out that implements the IPoolable interface, but not required to use it.
 
 Instructions:
