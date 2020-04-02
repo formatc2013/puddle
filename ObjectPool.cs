@@ -5,39 +5,30 @@ using UnityEngine;
 [System.Serializable]
 public class ObjectPool
 {
-    private Stack<GameObject> primaryPool, secondaryPool;
+    private Stack<GameObject> primaryPool;//, secondaryPool;
 
     private List<GameObject> activePool;
-    
-    //this is for debugging pools, you can comment this out with the setlist() calls
-    public List<GameObject> prim, sec;
 
     private GameObject goToPool;
 
     public int rangeOfFirstPool;
-
-    //private GameObject primaryParentGO;
-    //private GameObject secondaryParentGO;
-
-    private int rangeOfSecondaryPool;
 
     private int numberOfInstancesToCreateWhenAllQueuesEmpty;
 
     private bool useActivePool;
     private bool hasRequestedObjectsSinceLastCleanup;
     private bool autoCleanUpEnabled;
-    private int cleanAttempts;
 
     public ObjectPool(GameObject gotopool,
-        int numberofinitialelements = 4,
-        int startaddingtosecondarypoolat = 8,
-        int rangeofsecodarypool = 8,
-        int numberofinstancestocreatewhenallqueuesempty = 4,
-        bool useactivepool = false,
+        int numberofinitialelements = 14,
+        bool useactivepool = true,
         bool isautocleanupenabled = true)
     {
-        InitializeStack(gotopool, numberofinitialelements, startaddingtosecondarypoolat,
-            rangeofsecodarypool, numberofinstancestocreatewhenallqueuesempty, useactivepool, isautocleanupenabled);
+        InitializeStack(
+            gotopool, 
+            numberofinitialelements,
+            useactivepool,
+            isautocleanupenabled);
 
         Scheduler.OnAutoMemoryCleanRequest += AutoCleanUp;
     }
@@ -50,10 +41,7 @@ public class ObjectPool
     /// <param name="startaddingtosecondarypoolat"></param>
     private void InitializeStack(GameObject gotopool,
         int numberofinitialelements = 4,
-        int startaddingtosecondarypoolat = 8,
-        int rangeofsecodarypool = 8,
-        int numberofinstancestocreatewhenallqueuesempty = 4,
-        bool useactivepool = false,
+        bool useactivepool = true,
         bool isautocleanupenabled = true)
     {
         autoCleanUpEnabled = isautocleanupenabled;
@@ -75,23 +63,11 @@ public class ObjectPool
 
         activePool = new List<GameObject>();
 
-        rangeOfFirstPool = startaddingtosecondarypoolat;
-
-        rangeOfSecondaryPool = rangeofsecodarypool;
-
-        numberOfInstancesToCreateWhenAllQueuesEmpty = numberofinstancestocreatewhenallqueuesempty;
-
-        secondaryPool = new Stack<GameObject>();
-
+        rangeOfFirstPool = numberofinitialelements;
+            
         goToPool = gotopool;
 
         primaryPool = new Stack<GameObject>();
-
-        // primaryParentGO = GameObject.Instantiate(
-        //     new GameObject("primary " + goToPool.ToString()));
-
-        // secondaryParentGO = GameObject.Instantiate(
-        //    new GameObject("seconary " + goToPool.ToString()));
 
         for (int i = 0; i < numberofinitialelements; i++)
         {
@@ -99,26 +75,24 @@ public class ObjectPool
 
             gotoadd.SetActive(false);
 
-            //   gotoadd.transform.SetParent(primaryParentGO.transform);
-
             primaryPool.Push(gotoadd);
         }
-        //only for debugging, comment this out if not needed
-        setlists();
+
+        //setlists();
     }
 
-    private void setlists()
+    /*private void setlists()
     {
         prim = primaryPool.ToList();
         sec = secondaryPool.ToList();
-    }
+    }*/
 
     private GameObject GenerateNewInstance()
     {
         var gotoadd = GameObject.Instantiate(goToPool, new Vector3(0, -100, 0), Quaternion.identity);
 
         gotoadd.GetComponent<IPoolable>().SetPool(this);
-        setlists();
+        //setlists();
         return gotoadd;
     }
 
@@ -126,18 +100,7 @@ public class ObjectPool
     {
         hasRequestedObjectsSinceLastCleanup = true;
 
-        //use secondary pool first
-        if (secondaryPool.Count > 0)
-        {
-            var objecttoreturn = GetInstanceFromSecondaryPool(position, isactive);
-            if (useActivePool)
-
-                activePool.Add(objecttoreturn);
-            return objecttoreturn;
-        }
-
-        //than primary
-        else if (primaryPool.Count > 0)
+       if (primaryPool.Count > 0)
         {
             var objecttoreturn = GetInstanceFromPrimaryPool(position, isactive);
             if (useActivePool)
@@ -177,13 +140,15 @@ public class ObjectPool
         gotoaddtolist = GenerateNewInstance();
         gotoaddtolist.transform.position = position;
         gotoaddtolist.SetActive(isactive);
-        setlists();
+
+        //setlists();
         return gotoaddtolist;
     }
 
     private GameObject GetInstanceFromPrimaryPool(Vector3 position, bool isactive)
     {
         var objecttoreturn = primaryPool.Pop();
+
         objecttoreturn = objecttoreturn == null ? GenerateInstances(position) : objecttoreturn;
 
         objecttoreturn.transform.position = position;
@@ -191,41 +156,9 @@ public class ObjectPool
         objecttoreturn.SetActive(isactive);
 
         objecttoreturn.transform.parent = null;
-        setlists();
+        //setlists();
         //Debug.Log("adding from 1. pool: " + objecttoreturn);
         return objecttoreturn;
-    }
-
-    private GameObject GetInstanceFromSecondaryPool(Vector3 position, bool isactive)
-    {
-        var objecttoreturn = secondaryPool.Pop();
-
-        objecttoreturn = objecttoreturn == null ? primaryPool.Pop() : objecttoreturn;
-
-        objecttoreturn = objecttoreturn == null ? GenerateInstances(position) : objecttoreturn;
-
-        objecttoreturn.transform.position = position;
-
-        objecttoreturn.SetActive(isactive);
-
-        objecttoreturn.transform.parent = null;
-         //only for debugging, comment this out if not needed
-        setlists();
-        //Debug.Log("adding from 2. pool: " + objecttoreturn);
-        return objecttoreturn;
-    }
-
-    private void EmptySecondaryPool()
-    {
-        if (secondaryPool.Count <= 0) return;
-
-        for (int i = 0; i < secondaryPool.Count; i++)
-        {
-            GameObject.Destroy(secondaryPool.Pop());
-            Debug.Log("Destroying: ");
-        }
-         //only for debugging, comment this out if not needed
-        setlists();
     }
 
     /// <summary>
@@ -249,43 +182,11 @@ public class ObjectPool
                 "Abort pooling! ");
             return;
         }
-        //if there are too many in the stack
-        //add them to the secondary stack
-        if (primaryPool.Count >= rangeOfFirstPool)
-        {
-            if (secondaryPool.Count >= rangeOfSecondaryPool)
-            {
-                Debug.Log("Destroying: " + objecttohide);
-                GameObject.Destroy(objecttohide);
-                if (secondaryPool.Count > 0)
-                    GameObject.Destroy(secondaryPool.Pop());
-                setlists();
-                //EmptySecondaryPool();
-                return;
-            }
-
-            AddInstanceToSecondary(objecttohide);
-             //only for debugging, comment this out if not needed
-            setlists();
-            return;
-        }
-        setlists();
+   
+        //setlists();
         AddInstanceToPrimary(objecttohide);
     }
-
-    private void AddInstanceToSecondary(GameObject objecttohide)
-    {
-        objecttohide.SetActive(false);
-        if (useActivePool)
-
-            activePool.Remove(objecttohide);
-        //objecttohide.transform.SetParent(secondaryParentGO.transform);
-
-        secondaryPool.Push(objecttohide);
-         //only for debugging, comment this out if not needed
-        setlists();
-    }
-
+   
     private void AddInstanceToPrimary(GameObject objecttohide)
     {
         objecttohide.SetActive(false);
@@ -294,8 +195,7 @@ public class ObjectPool
         //objecttohide.transform.SetParent(primaryParentGO.transform);
 
         primaryPool.Push(objecttohide);
-         //only for debugging, comment this out if not needed
-        setlists();
+        //setlists();
     }
 
     public void HideActiveOnes()
@@ -317,23 +217,11 @@ public class ObjectPool
         {
             //Debug.Log("not cleaned: " + goToPool);
             hasRequestedObjectsSinceLastCleanup = false;
-            cleanAttempts=0;
+            //cleanAttempts=0;
             return;
         }
 
-        if (secondaryPool.Count > 0)
-        {
-            GameObject.Destroy(secondaryPool.Pop());
-            //Debug.Log("cleaned from secondary: " + goToPool);
-        }
-        else if (cleanAttempts <= 4){
-
-            cleanAttempts++;
-            
-
-        }
-        else {
-
+        
             //clean first pool
             if (primaryPool.Count >= rangeOfFirstPool / 2)
             {
@@ -344,12 +232,10 @@ public class ObjectPool
             }
             //else Debug.Log("no more cleaning needed: " + goToPool);
 
-        }
+        //}
 
 
         hasRequestedObjectsSinceLastCleanup = false;
-          //only for debugging, comment this out if not needed
-        setlists();
     }
 
     public void DisablePool() {
@@ -361,12 +247,8 @@ public class ObjectPool
             GameObject.Destroy(item);
             //Debug.Log("Disabled and destroyed in primary: "+item);
         }
-        if (secondaryPool.Count > 0)
-            foreach (var item in secondaryPool)
-        {
-            GameObject.Destroy(item);
-            //Debug.Log("Disabled and destroyed in secondary: "+item);
-        }
 
     }
+
+
 }
