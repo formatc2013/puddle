@@ -2,17 +2,33 @@
 using System.Collections;
 using UnityEngine;
 
-public class Scheduler : MonoBehaviour
+public class MemoryPoolAutoCleanUpScheduler : MonoBehaviour
 {
-    [SerializeField] private float cleanTimeInterval;
+    [SerializeField] private float cleanTimeInterval = 3;
     private WaitForSeconds cleanTimeIntervalWFS;
 
-    public static Action OnAutoMemoryCleanRequest = delegate { };
+    public Action OnAutoMemoryCleanRequest = delegate { };
+
+    public float CleanTimeInterval { get => cleanTimeInterval; set { if (value > 0) cleanTimeInterval = value; } }
 
     private void Awake()
     {
-        cleanTimeInterval = cleanTimeInterval == 0 ? 10f : cleanTimeInterval;
-        cleanTimeIntervalWFS = new WaitForSeconds(cleanTimeInterval);
+        CleanTimeInterval = CleanTimeInterval == 0 ? 3f : CleanTimeInterval;
+        cleanTimeIntervalWFS = new WaitForSeconds(CleanTimeInterval);
+    }
+
+    private void OnEnable()
+    {
+        StartScheduling();
+    }
+
+    private void OnDisable()
+    {
+        StopAllCoroutines();
+    }
+
+    public void StartScheduling()
+    {
         StartCoroutine(ScheduleMemoryPoolAutoClean());
     }
 

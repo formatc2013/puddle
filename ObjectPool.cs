@@ -5,43 +5,55 @@ using UnityEngine;
 [System.Serializable]
 public class ObjectPool
 {
-    private Stack<GameObject> primaryPool;//, secondaryPool;
+    private Stack<AbstractPoolable> pool;//, secondaryPool;
 
-    private List<GameObject> activePool;
+    private List<AbstractPoolable> activePool;
 
-    private GameObject goToPool;
+    private AbstractPoolable goToPool;
 
-    public int rangeOfFirstPool;
+    public int rangeOfPool;
 
     private int numberOfInstancesToCreateWhenAllQueuesEmpty;
 
     private bool useActivePool;
-    private bool hasRequestedObjectsSinceLastCleanup;
+
     private bool autoCleanUpEnabled;
 
-    public ObjectPool(GameObject gotopool,
+    private MemoryPoolAutoCleanUpScheduler m_scheduler;
+
+    public ObjectPool(AbstractPoolable gotopool,
         int numberofinitialelements = 14,
-        bool useactivepool = true,
-        bool isautocleanupenabled = true)
+        bool useactivepool = false,
+        bool isautocleanupenabled = true,
+        float cleantimeinterval = 3f)
     {
         InitializeStack(
-            gotopool, 
+            gotopool,
             numberofinitialelements,
             useactivepool,
             isautocleanupenabled);
 
-        Scheduler.OnAutoMemoryCleanRequest += AutoCleanUp;
+        if (isautocleanupenabled)
+        {
+            m_scheduler = new GameObject(gotopool.ToString() + "_memorycleanscheduler").AddComponent<MemoryPoolAutoCleanUpScheduler>();
+            m_scheduler.CleanTimeInterval = cleantimeinterval;
+            m_scheduler.OnAutoMemoryCleanRequest += AutoCleanUp;
+        }
     }
-   ~ObjectPool() { Scheduler.OnAutoMemoryCleanRequest -= AutoCleanUp; }
+
+    ~ObjectPool()
+    {
+        m_scheduler.OnAutoMemoryCleanRequest -= AutoCleanUp;
+    }
 
     /// <summary>
     /// </summary>
     /// <param name="gotopool">Must implement IPoolable</param>
     /// <param name="numberofinitialelements"></param>
     /// <param name="startaddingtosecondarypoolat"></param>
-    private void InitializeStack(GameObject gotopool,
+    private void InitializeStack(AbstractPoolable gotopool,
         int numberofinitialelements = 4,
-        bool useactivepool = true,
+        bool useactivepool = false,
         bool isautocleanupenabled = true)
     {
         autoCleanUpEnabled = isautocleanupenabled;
@@ -52,30 +64,23 @@ public class ObjectPool
             return;
         }
 
-        if (gotopool.GetComponent<IPoolable>() == null)
-        {
-            Debug.LogError("Gotopool must have a component that implements IPoolable!" +
-                " Aborting initialization!");
-            return;
-        }
-
         useActivePool = useactivepool;
 
-        activePool = new List<GameObject>();
+        activePool = new List<AbstractPoolable>();
 
-        rangeOfFirstPool = numberofinitialelements;
-            
+        rangeOfPool = numberofinitialelements;
+
         goToPool = gotopool;
 
-        primaryPool = new Stack<GameObject>();
+        pool = new Stack<AbstractPoolable>();
 
         for (int i = 0; i < numberofinitialelements; i++)
         {
-            GameObject gotoadd = GenerateNewInstance();
+            var gotoadd = GenerateNewInstance();
 
-            gotoadd.SetActive(false);
+            gotoadd.gameObject.SetActive(false);
 
-            primaryPool.Push(gotoadd);
+            pool.Push(gotoadd);
         }
 
         //setlists();
@@ -87,20 +92,23 @@ public class ObjectPool
         sec = secondaryPool.ToList();
     }*/
 
-    private GameObject GenerateNewInstance()
+    private AbstractPoolable GenerateNewInstance()
     {
         var gotoadd = GameObject.Instantiate(goToPool, new Vector3(0, -100, 0), Quaternion.identity);
 
-        gotoadd.GetComponent<IPoolable>().SetPool(this);
+        gotoadd.SetPool(this);
         //setlists();
         return gotoadd;
     }
 
-    public GameObject AddObjectAtPosition(Vector3 position, bool isactive = true)
+    public AbstractPoolable AddObjectAtPosition(Vector3 position, bool isactive = true)
     {
-        hasRequestedObjectsSinceLastCleanup = true;
-
-       if (primaryPool.Count > 0)
+        if (pool == null)
+        {
+            Debug.LogError("Pool is null! Something wrong with your implementation");
+            return null;
+        }
+        if (pool.Count > 0)
         {
             var objecttoreturn = GetInstanceFromPrimaryPool(position, isactive);
             if (useActivePool)
@@ -120,16 +128,43 @@ public class ObjectPool
         }
     }
 
-    private GameObject GenerateInstances(Vector3 position, bool isactive = false)
+    public GameObject AddGameObjectAtPosition(Vector3 position, bool isactive = true)
     {
-        GameObject gotoaddtolist = null;
+        if (pool == null)
+        {
+            Debug.LogError("Pool is null! Something wrong with your implementation");
+            return null;
+        }
+        if (pool.Count > 0)
+        {
+            var objecttoreturn = GetInstanceFromPrimaryPool(position, isactive);
+            if (useActivePool)
 
+                activePool.Add(objecttoreturn);
+            return objecttoreturn.gameObject;
+        }
+
+        //if both empty instantiate
+        else
+        {
+            var objecttoreturn = GenerateInstances(position, isactive);
+            if (useActivePool)
+
+                activePool.Add(objecttoreturn);
+            return objecttoreturn.gameObject;
+        }
+    }
+
+    private AbstractPoolable GenerateInstances(Vector3 position, bool isactive = false)
+    {
+        AbstractPoolable gotoaddtolist = null;
+        if (numberOfInstancesToCreateWhenAllQueuesEmpty == 0) numberOfInstancesToCreateWhenAllQueuesEmpty = 3;
         //add new instances to the list
         for (int i = 0; i < numberOfInstancesToCreateWhenAllQueuesEmpty; i++)
         {
             gotoaddtolist = GenerateNewInstance();
-            primaryPool.Push(gotoaddtolist);
-            gotoaddtolist.SetActive(false);
+            pool.Push(gotoaddtolist);
+            gotoaddtolist.gameObject.SetActive(isactive);
             // gotoaddtolist.transform.SetParent(primaryParentGO.transform);
 
             //Debug.Log("Adding element to the stack: " + gotoaddtolist + i);
@@ -139,21 +174,25 @@ public class ObjectPool
 
         gotoaddtolist = GenerateNewInstance();
         gotoaddtolist.transform.position = position;
-        gotoaddtolist.SetActive(isactive);
+        gotoaddtolist.gameObject.SetActive(isactive);
 
         //setlists();
         return gotoaddtolist;
     }
 
-    private GameObject GetInstanceFromPrimaryPool(Vector3 position, bool isactive)
+    private AbstractPoolable GetInstanceFromPrimaryPool(Vector3 position, bool isactive)
     {
-        var objecttoreturn = primaryPool.Pop();
+        var objecttoreturn = pool.Pop();
 
-        objecttoreturn = objecttoreturn == null ? GenerateInstances(position) : objecttoreturn;
+        if (!objecttoreturn)
+        {
+            Debug.Log("null in pool!");
+            return GenerateInstances(position); ;
+        }
 
         objecttoreturn.transform.position = position;
 
-        objecttoreturn.SetActive(isactive);
+        objecttoreturn.gameObject.SetActive(isactive);
 
         objecttoreturn.transform.parent = null;
         //setlists();
@@ -165,7 +204,7 @@ public class ObjectPool
     /// Pooling back.
     /// </summary>
     /// <param name="objecttohide"></param>
-    public void HideObject(GameObject objecttohide)
+    public void HideObject(AbstractPoolable objecttohide)
     {
         if (!objecttohide)
         {
@@ -173,36 +212,48 @@ public class ObjectPool
             return;
         }
 
-        IPoolable objectpoolable = objecttohide.GetComponent<IPoolable>();
+        if (objecttohide.name != goToPool.name + "(Clone)")
+        {
+            Debug.LogError(
+                "Objecttohide name doesn't match! GoToPool name:" + goToPool.name +
+                ". ObjectToHide name: " + objecttohide.name +
+                ". Destroying unknown GO!");
+            GameObject.Destroy(objecttohide);
+            return;
+        }
+
+        AbstractPoolable objectpoolable = objecttohide.GetComponent<AbstractPoolable>();
 
         if (objectpoolable == null)
         {
             Debug.LogError("A non-poolable object is trying to get into the pooling system." +
                 "Add an IPoolable script to your gameobject! " +
-                "Abort pooling! ");
+                "Destroying! ");
+            GameObject.Destroy(objecttohide);
             return;
         }
-   
+
         //setlists();
-        AddInstanceToPrimary(objecttohide);
+        AddInstanceToPool(objecttohide);
     }
-   
-    private void AddInstanceToPrimary(GameObject objecttohide)
+
+    private void AddInstanceToPool(AbstractPoolable objecttohide)
     {
-        objecttohide.SetActive(false);
+        objecttohide.gameObject.SetActive(false);
+
         if (useActivePool)
             activePool.Remove(objecttohide);
-        //objecttohide.transform.SetParent(primaryParentGO.transform);
 
-        primaryPool.Push(objecttohide);
+        pool.Push(objecttohide);
         //setlists();
     }
 
     public void HideActiveOnes()
     {
-        if (activePool == null || activePool.Count == 0)
-            if (!useActivePool) { Debug.LogError("No activePool enabled!"); return; }
-        foreach (var activeitem in activePool.ToList())
+        if (activePool == null || activePool.Count == 0) return;
+        if (!useActivePool) { Debug.LogError("No activePool enabled!"); return; }
+
+        foreach (var activeitem in activePool)
         {
             if (activeitem)
                 HideObject(activeitem);
@@ -211,44 +262,30 @@ public class ObjectPool
 
     private void AutoCleanUp()
     {
-        if (!autoCleanUpEnabled) return;
-        //if not in use start emptying secondary pool
-        if (hasRequestedObjectsSinceLastCleanup)
-        {
-            //Debug.Log("not cleaned: " + goToPool);
-            hasRequestedObjectsSinceLastCleanup = false;
-            //cleanAttempts=0;
-            return;
-        }
+        if (!autoCleanUpEnabled || pool.Count == 1) return;
 
-        
-            //clean first pool
-            if (primaryPool.Count >= rangeOfFirstPool / 2)
+        //clean first pool
+        if (pool.Count > rangeOfPool)
+        {
+            var cleanedone = pool.Pop();
+            GameObject.Destroy(cleanedone);
+            Debug.Log("Cleaning: " + cleanedone + ", elements left in pool: " + pool.Count);
+        }
+    }
+
+    public void DisablePool()
+    {
+        HideActiveOnes();
+
+        if (m_scheduler)
+            m_scheduler.OnAutoMemoryCleanRequest -= AutoCleanUp;
+
+        if (pool.Count > 0)
+            foreach (var item in pool)
             {
-
-                GameObject.Destroy(primaryPool.Pop());
-                //Debug.Log("cleaned from primary: " + goToPool);
-
+                GameObject.Destroy(item);
             }
-            //else Debug.Log("no more cleaning needed: " + goToPool);
-
-        //}
-
-
-        hasRequestedObjectsSinceLastCleanup = false;
     }
 
-    public void DisablePool() {
-
-        Scheduler.OnAutoMemoryCleanRequest -= AutoCleanUp;
-        if(primaryPool.Count>0)
-        foreach (var item in primaryPool)
-        {
-            GameObject.Destroy(item);
-            //Debug.Log("Disabled and destroyed in primary: "+item);
-        }
-
-    }
-
-
+    public bool IsEmpty() => pool == null || pool.Count == 0;
 }
