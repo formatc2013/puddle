@@ -6,7 +6,8 @@ public abstract class AbstractPoolable : MonoBehaviour
 
     public virtual void PoolBack()
     {
-        m_pool?.HideObject(this);
+        if (gameObject && m_pool != null)
+            m_pool.HideObject(this);
     }
 
     public virtual void SetPool(ObjectPool objectPool)

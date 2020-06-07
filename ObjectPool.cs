@@ -1,8 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-[System.Serializable]
+[Serializable]
 public class ObjectPool
 {
     private Stack<AbstractPoolable> pool;//, secondaryPool;
@@ -212,16 +213,6 @@ public class ObjectPool
             return;
         }
 
-        if (objecttohide.name != goToPool.name + "(Clone)")
-        {
-            Debug.LogError(
-                "Objecttohide name doesn't match! GoToPool name:" + goToPool.name +
-                ". ObjectToHide name: " + objecttohide.name +
-                ". Destroying unknown GO!");
-            GameObject.Destroy(objecttohide);
-            return;
-        }
-
         AbstractPoolable objectpoolable = objecttohide.GetComponent<AbstractPoolable>();
 
         if (objectpoolable == null)
@@ -229,7 +220,7 @@ public class ObjectPool
             Debug.LogError("A non-poolable object is trying to get into the pooling system." +
                 "Add an IPoolable script to your gameobject! " +
                 "Destroying! ");
-            GameObject.Destroy(objecttohide);
+            DestroyGO(objecttohide);
             return;
         }
 
@@ -243,49 +234,51 @@ public class ObjectPool
 
         if (useActivePool)
             activePool.Remove(objecttohide);
-
-        pool.Push(objecttohide);
+        if (pool != null)
+            pool.Push(objecttohide);
         //setlists();
-    }
-
-    public void HideActiveOnes()
-    {
-        if (activePool == null || activePool.Count == 0) return;
-        if (!useActivePool) { Debug.LogError("No activePool enabled!"); return; }
-
-        foreach (var activeitem in activePool)
-        {
-            if (activeitem)
-                HideObject(activeitem);
-        }
     }
 
     private void AutoCleanUp()
     {
-        if (!autoCleanUpEnabled || pool.Count == 1) return;
+        if (!autoCleanUpEnabled || pool.Count <= 1) return;
 
         //clean first pool
         if (pool.Count > rangeOfPool)
         {
             var cleanedone = pool.Pop();
-            GameObject.Destroy(cleanedone);
+
+            DestroyGO(cleanedone);
+
             Debug.Log("Cleaning: " + cleanedone + ", elements left in pool: " + pool.Count);
         }
     }
 
     public void DisablePool()
     {
-        HideActiveOnes();
+        activePool.ForEach(x => DestroyGO(x));
+
+        activePool.Clear();
 
         if (m_scheduler)
             m_scheduler.OnAutoMemoryCleanRequest -= AutoCleanUp;
 
         if (pool.Count > 0)
-            foreach (var item in pool)
+            foreach (var pooleditem in pool)
             {
-                GameObject.Destroy(item);
+                DestroyGO(pooleditem);
             }
     }
 
     public bool IsEmpty() => pool == null || pool.Count == 0;
+
+    public void DestroyGO<T>(T objecttokill) where T : MonoBehaviour
+    {
+        if (objecttokill == null) return;
+
+        var tokill = objecttokill as GameObject;
+
+        if (tokill) GameObject.Destroy(objecttokill);
+        else GameObject.Destroy(objecttokill.gameObject);
+    }
 }
